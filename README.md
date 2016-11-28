@@ -185,6 +185,79 @@ int main(){
 We could use some more error checking, but our app will be completely
 rewrote in near future, so better not feel to much attached to it.
 
+Compiling
+---------
+
+The code can be easily ran if you put everything up on a .cpp file.
+You can also put the FileTarget on its own header file, it is better
+organized and in both cases we can just compile just by firing the 
+compiler. We organized our own [code][] that way.
+
+To compile in Unix you can just type either:
+
+	$ gcc main.cpp
+	
+This will output the executable a.out. *Of course, you could use 
+clang instead*, or specify another name later.
+
+On Windows, you can use *mingw-like* just like before, or if you prefer
+you can use a MSVC like that:
+
+	$ cl /EHsc main.cpp
+	
+This should generate main.exe
+	
+For now, both ways are good enough, but in the future we will likely
+need more .cpp files, and this makes a little more complicated in the
+future. So, instead, we should think about using a build system.
+
+The most obvious would be using whatever your favorite IDE. Its is a
+good option, our code is meant to be simple, so we won't do anything
+that needs special settings and you can just dump the code on the IDE
+and the default settings will be enough to compile. You, reader, can
+do it (and if you are new to C++ maybe is a good idea, as build system
+are... complicated) or instead you can use any build system you prefer,
+but we can't just choose any for ourselves, as we mean to be as 
+inclusive and multiplatform. 
+
+So we will use the [cmake], that is multiplatform, can generate build
+scripts for almost any other build system and is the *closest* we have
+of a standard build system in the chaotic C++ world we live. So next
+section will explain how we set up it. If you prefer your own build
+system, just ignore that section and go to the next one.
+
+### Using CMAKE
+
+Our configuration is fairly basic for now, our 
+[CMakeLists.txt][cmakelists] is basically like this:
+
+```cmake
+project(Sweet)
+
+add_executable(sweet
+    src/main
+)
+```
+
+We defined our project name, and defined an executable with our main
+file. As we are using gcc family to our primary tests, and we want top
+quality code, we also added these lines:
+
+```cmake
+target_compile_options(sweet
+    PRIVATE -Wall -Werror -pedantic
+)
+```
+
+These enable all warnings, even some of the most pedantic ones (HA!). 
+And also tells the compiler to treat any warning as an error! So all
+our [code][] must be at very good quality or otherwise it won't even
+compile.
+
+There are other stuff on our [CMakeLists.txt][cmakelists], but they're
+either some CMake boilerplate or some stuff we did to facilitate our
+testing. Don't mind them now. 
+
 Final thoughts
 --------------
 
@@ -199,10 +272,12 @@ the view happens and then go back to it, and doing so is a good exercise
 to do. But our [next lesson][lesson2] will show that is possible to get a better
 solution, which also solves 1 and 2; 
 
-See the code at [code], put comments, couts, edit... thinker with it a 
+Look at the [code], put comments, couts, edit... thinker with it a 
 little, it is the best way to learn.
 
 
 [main]: TODO
 [lesson2]: TODO
 [code]: src/
+[cmake]: https://cmake.org/
+[cmakelists]: ./CMakeLists.txt
