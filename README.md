@@ -276,8 +276,8 @@ Look at the [code], put comments, couts, edit... thinker with it a
 little, it is the best way to learn.
 
 
-[main]: TODO
-[lesson2]: TODO
+[main]: https://talesm.github.io/sweet/
+[lesson2]: ../lesson2/README.md
 [code]: src/
 [cmake]: https://cmake.org/
 [cmakelists]: ./CMakeLists.txt
