@@ -4,28 +4,6 @@ SWEET (Sweet and Weird Educational EdiTor)
 This project is set to make a text editor with educational purpose, i.e, to known how one generally works.
 You may want to see our [main][] site before begin.
 
-Goals
-=====
-
-Besides its educational purpose, we want to make a fully functional editor, so we want:
-
-- Ability to open, close, edit them; 
-- Ability to work with different text encodings, to convert among them and to reasonably detect them;
-- Support to syntax highlight and section folding through some extension mechanism;
-- Support for text completion, also through some extension mechanism.
-- Ability to *scriptize* (through macro or something like that);
-
-We will focus on the inner working of the editor (their data structures and stuff like that), so our main 
-artifact produced will mostly be a library. We also produce the lessons itself, explaining its particular focus.
-Finally we will have at least one *reference implementation* editor, who implements the library into a somewhat
-useful editor. 
-
-Development Strategy
-====================
-
-Our development strategy is to develop both code and the current lesson directly on 
-branch master. When a lesson is ready, it is then moved to its own branch.  
-
 Lesson 1 - File Target
 ======================
 
