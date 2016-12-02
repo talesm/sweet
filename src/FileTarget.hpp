@@ -8,7 +8,10 @@
 #ifndef SRC_FILETARGET_HPP_
 #define SRC_FILETARGET_HPP_
 
+#include <cerrno>
+#include <cstring>
 #include <cstdio>
+#include <stdexcept>
 #include <string>
 
 /**
@@ -33,6 +36,9 @@ private:
 
 inline FileTarget::FileTarget(std::string const& filename) {
 	file = fopen(filename.c_str(), "r+b");
+	if (!file) {
+		throw std::runtime_error("Error opening '" + filename + "': " + std::strerror(errno));
+	}
 }
 
 inline FileTarget::~FileTarget() {
@@ -69,7 +75,7 @@ inline void FileTarget::go(long value) {
 inline void FileTarget::write(std::string const& value) {
 	auto r = fwrite(value.data(), 1, value.size(), file);
 	if (r != value.size()) {
-		std::cerr << "Some error occurred, can't write." << std::endl;
+		throw std::runtime_error("Some error occurred, can't write.");
 	}
 }
 
