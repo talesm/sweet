@@ -5,8 +5,8 @@
  * @author talesm
  */
 
-#ifndef SRC_FILETARGET_HPP_
-#define SRC_FILETARGET_HPP_
+#ifndef SWEET_FILETARGET_HPP_
+#define SWEET_FILETARGET_HPP_
 
 #include <cerrno>
 #include <cstring>
@@ -140,4 +140,4 @@ inline void FileTarget::flush() {
 	fflush(file);
 }
 
-#endif /* SRC_FILETARGET_HPP_ */
+#endif /* SWEET_FILETARGET_HPP_ */

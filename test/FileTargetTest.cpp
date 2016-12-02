@@ -10,13 +10,8 @@
 #include <fstream>
 
 #include "catch.hpp"
+#include "fileUtils.hpp"
 
-using namespace std;
-
-#ifndef TEST_TEMP_PREFIX
-#define TEST_TEMP_PREFIX "./test"
-#endif
-#define TEST_FILE(test_str) TEST_TEMP_PREFIX "/" test_str
 
 inline std::string read(FileTarget &target, long count){
 	std::string buffer;
@@ -30,10 +25,8 @@ inline void write(FileTarget &target, std::string const &buffer){
 
 TEST_CASE("FileTarget Happy", "[target]") {
 	auto path1 = TEST_FILE("test1.txt");
-	{
-		ofstream f { path1, ios_base::binary };
-		f << "Hello World" << endl;
-	}
+	populateFile(path1, "Hello World");
+
 	FileTarget target { path1 };
 
 	SECTION("Read"){

@@ -11,7 +11,8 @@ target_compile_options(sweet
 
 add_executable(sweet_tests
     test/catch
-    test/FileTargetTest.cpp
+    test/FileTargetTest
+    test/MemoryTargetTest
 )
 
 target_compile_definitions(sweet_tests
