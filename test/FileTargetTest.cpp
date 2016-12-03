@@ -7,8 +7,6 @@
 
 #include "../src/FileTarget.hpp"
 
-#include <fstream>
-
 #include "catch.hpp"
 #include "fileUtils.hpp"
 
@@ -25,7 +23,7 @@ inline void write(FileTarget &target, std::string const &buffer){
 
 TEST_CASE("FileTarget Happy", "[target]") {
 	auto path1 = TEST_FILE("test1.txt");
-	populateFile(path1, "Hello World");
+	populateFile(path1, "Hello World\n");
 
 	FileTarget target { path1 };
 

@@ -19,7 +19,17 @@ using namespace std;
 
 inline void populateFile(const char* path1, const char* text) {
 	ofstream f { path1, ios_base::binary };
-	f << text << endl;
+	f << text;
+}
+
+inline string getFileContent(const char* path1) {
+	ifstream f { path1, ios_base::binary };
+	string buffer;
+	string line;
+	while(getline(f, line)){
+		buffer += line;
+	}
+	return buffer;
 }
 
 #endif /* TEST_FILEUTILS_HPP_ */

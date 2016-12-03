@@ -76,6 +76,8 @@ public:
 	void replace(INPUT_ITERATOR first, INPUT_ITERATOR &&last);
 	void flush();
 
+	void shrink();
+
 private:
 	FILE *file;
 };
@@ -138,6 +140,17 @@ inline void FileTarget::replace(INPUT_ITERATOR first, INPUT_ITERATOR &&last) {
 
 inline void FileTarget::flush() {
 	fflush(file);
+}
+
+inline void FileTarget::shrink() {
+	auto pos = tell();
+	toStart();
+	std::string content;
+	view(pos, std::back_inserter(content));
+	if(!freopen(nullptr, "w+", file)){
+		throw new std::runtime_error("Can not shrink");
+	}
+	replace(content.begin(), content.end());
 }
 
 #endif /* SWEET_FILETARGET_HPP_ */
