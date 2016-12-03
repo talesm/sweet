@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
 		char command = line.front();
 		switch (command) {
 		case 'q':
-			break;
+			return 0;
 		case 'v':
 			cout << target.view(stol(line.substr(1))) << endl;
 			break;
