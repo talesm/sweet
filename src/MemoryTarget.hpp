@@ -122,6 +122,10 @@ inline MemoryTarget::MemoryTarget(std::string const& filename) :
 
 template<typename OUTPUT_ITERATOR>
 inline void MemoryTarget::view(size_t count, OUTPUT_ITERATOR &&out) const {
+	static_assert(
+			std::is_base_of<std::output_iterator_tag, typename std::iterator_traits<OUTPUT_ITERATOR>::iterator_category>::value,
+			"parameter out needs to be an output iterator."
+	);
 	viewRange(position, count, out);
 }
 
@@ -155,7 +159,7 @@ inline size_t MemoryTarget::size() const {
 template <typename FORWARD_ITERATOR>
 inline void MemoryTarget::replace(FORWARD_ITERATOR &&first, FORWARD_ITERATOR &&last) {
 	using namespace std;
-	size_t remainingSize = content.size() - position;
+	ptrdiff_t remainingSize = content.size() - position;
 	if (std::distance(first, last) <= remainingSize) {
 		auto result = copy(first, last, content.begin() + position);
 		position = result - content.begin();
