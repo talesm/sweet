@@ -21,6 +21,10 @@ class FileTarget {
 public:
 	FileTarget(std::string const& filename);
 	~FileTarget();
+	FileTarget(FileTarget const&) = delete;
+	FileTarget(FileTarget &&) = delete;
+	FileTarget &operator=(FileTarget const&) = delete;
+	FileTarget &operator=(FileTarget &&) = delete;
 
 	std::string view(long count) const;
 	long tell() const;
@@ -35,9 +39,12 @@ private:
 };
 
 inline FileTarget::FileTarget(std::string const& filename) {
-	file = fopen(filename.c_str(), "r+b");
-	if (!file) {
-		throw std::runtime_error("Error opening '" + filename + "': " + std::strerror(errno));
+	file = fopen(filename.c_str(), "rb+");
+	if (!file) { //Maybe it does not exist, so we try to create a new
+		file = fopen(filename.c_str(), "wb+");
+		if (!file) { //If it still doesn't exist, we quit.
+			throw std::runtime_error("Error opening '" + filename + "': " + std::strerror(errno));
+		}
 	}
 }
 

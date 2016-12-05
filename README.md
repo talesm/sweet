@@ -47,7 +47,22 @@ private:
 We called it FileTarget because we may have some new target types in the future, 
 so we save ourselves the trouble of renaming this file. We will use FILEs instead 
 of fstreams because their interface is simpler. Our constructor only needs to do 
-a fopen and our destructor need to close it. Pretty simple. 
+a fopen and our destructor need to close it:
+
+```cpp
+inline FileTarget::FileTarget(std::string const& filename) {
+	file = fopen(filename.c_str(), "rb+");
+	if (!file) { //Maybe it does not exist, so we try to create a new
+		file = fopen(filename.c_str(), "wb+");
+		if (!file) { //If it still doesn't exist, we quit.
+			throw std::runtime_error("Error opening '" + filename + "': " + std::strerror(errno));
+		}
+	}
+}
+inline FileTarget::~FileTarget() {
+	fclose(file);
+}
+```
 
 The view method is const as it just lets us to see (some of) the file contents.
 It starts on the character under our cursor and shows n characters. We will have to
