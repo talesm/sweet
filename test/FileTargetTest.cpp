@@ -18,6 +18,16 @@ using namespace std;
 #endif
 #define TEST_FILE(test_str) TEST_TEMP_PREFIX "/" test_str
 
+inline std::string read(FileTarget &target, long count){
+	std::string buffer;
+	target.read(count, back_inserter(buffer));
+	return buffer;
+}
+
+inline void write(FileTarget &target, std::string const &buffer){
+	target.write(buffer.begin(), buffer.end());
+}
+
 TEST_CASE("FileTarget Happy", "[target]") {
 	auto path1 = TEST_FILE("test1.txt");
 	{
@@ -27,12 +37,12 @@ TEST_CASE("FileTarget Happy", "[target]") {
 	FileTarget target { path1 };
 
 	SECTION("Read"){
-		REQUIRE(target.view(12) == "Hello World\n");
+		REQUIRE(read(target, 12) == "Hello World\n");
 	}
 
 	SECTION("Tell"){
 		REQUIRE(target.tell() == 0);
-		target.view(12);
+		read(target, 12);
 		REQUIRE(target.tell() == 12);
 	}
 
@@ -46,14 +56,14 @@ TEST_CASE("FileTarget Happy", "[target]") {
 	}
 
 	SECTION("Write"){
-		REQUIRE_NOTHROW(target.write("Weird"));
+		REQUIRE_NOTHROW(write(target, "Weird"));
 		target.toStart();
-		REQUIRE(target.view(12) == "Weird World\n");
+		REQUIRE(read(target, 12) == "Weird World\n");
 		target.toEnd();
 		target.go(-1);
-		REQUIRE_NOTHROW(target.write("!!!"));
+		REQUIRE_NOTHROW(write(target, "!!!"));
 		target.toStart();
-		REQUIRE(target.view(14) == "Weird World!!!");
+		REQUIRE(read(target, 14) == "Weird World!!!");
 	}
 }
 

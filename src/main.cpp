@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
 	FileTarget target { argv[1] };
 
 	for(;;) {
-		string line;
+		string line, buffer;
 		cout << ">";
 		getline(cin, line);
 		if (line.size() == 0) {
@@ -24,7 +24,8 @@ int main(int argc, char **argv) {
 		case 'q':
 			return 0;
 		case 'v':
-			cout << target.view(stol(line.substr(1))) << endl;
+			target.read(stol(line.substr(1)), std::back_inserter(buffer));
+			cout << buffer << endl;
 			break;
 		case 't':
 			cout << target.tell() << endl;
@@ -39,7 +40,7 @@ int main(int argc, char **argv) {
 			target.go(stol(line.substr(1)));
 			break;
 		case 'w':
-			target.write(line.substr(1));
+			target.write(line.begin()+1, line.end());
 			break;
 		case 's':
 			target.flush();

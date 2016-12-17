@@ -15,23 +15,65 @@
 #include <string>
 
 /**
- * A file target that can be read and wrote.
+ * A file target that can be read and written.
  */
 class FileTarget {
 public:
+	/**
+	 * @brief Load the target from a file.
+	 * @param filename
+	 */
 	FileTarget(std::string const& filename);
+
+	/**
+	 * Dtor. Closes the file
+	 */
 	~FileTarget();
+
+	//We cant have these.
 	FileTarget(FileTarget const&) = delete;
 	FileTarget(FileTarget &&) = delete;
 	FileTarget &operator=(FileTarget const&) = delete;
 	FileTarget &operator=(FileTarget &&) = delete;
 
-	std::string view(long count) const;
+	/**
+	 * @brief Copies `count` characters to an output iterator.
+	 * @param count
+	 * @param out
+	 */
+	template<typename OUTPUT_ITERATOR>
+	void read(long count, OUTPUT_ITERATOR &&out) const;
+
+	/**
+	 * @brief  Return our current position
+	 */
 	long tell() const;
+
+	/**
+	 * @brief Goes to first position
+	 */
 	void toStart();
+
+	/**
+	 * @brief Goes to last position
+	 */
 	void toEnd();
+
+	/**
+	 * @brief Offsets position
+	 * @param value
+	 */
 	void go(long value);
-	void write(std::string const& value);
+
+	/**
+	 * @brief Writes the given content.
+	 *
+	 * It overwrites the current content and appends to end if necessary.
+	 * @param first
+	 * @param last
+	 */
+	template<typename INPUT_ITERATOR>
+	void write(INPUT_ITERATOR first, INPUT_ITERATOR &&last);
 	void flush();
 
 private:
@@ -52,15 +94,16 @@ inline FileTarget::~FileTarget() {
 	fclose(file);
 }
 
-inline std::string FileTarget::view(long count) const {
-	std::string buffer;
-	int ch = getc(file);
-	while (ch != EOF && count > 0) {
-		buffer += ch;
-		--count;
-		ch = getc(file);
+template<typename OUTPUT_ITERATOR>
+inline void FileTarget::read(long count, OUTPUT_ITERATOR &&out) const {
+	static_assert(
+			std::is_base_of<std::output_iterator_tag, typename std::iterator_traits<OUTPUT_ITERATOR>::iterator_category>::value,
+			"out parameter must be an output iterator"
+	);
+	int ch;
+	while ((ch = getc(file)) != EOF && count-- > 0) {
+		*out++ = ch;
 	}
-	return buffer;
 }
 
 inline long FileTarget::tell() const {
@@ -79,10 +122,17 @@ inline void FileTarget::go(long value) {
 	fseek(file, value, SEEK_CUR);
 }
 
-inline void FileTarget::write(std::string const& value) {
-	auto r = fwrite(value.data(), 1, value.size(), file);
-	if (r != value.size()) {
-		throw std::runtime_error("Some error occurred, can't write.");
+template<typename INPUT_ITERATOR>
+inline void FileTarget::write(INPUT_ITERATOR first, INPUT_ITERATOR &&last) {
+	static_assert(
+			std::is_base_of<std::input_iterator_tag, typename std::iterator_traits<INPUT_ITERATOR>::iterator_category>::value,
+			"first and last parameters must be input iterators"
+	);
+	while(first != last){
+		auto result = fputc(*first++, file);
+		if(result == EOF){
+			throw std::runtime_error("Some error occurred, can't write.");
+		}
 	}
 }
 
