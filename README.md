@@ -21,12 +21,12 @@ file to the memory and sync it with your disc regularly. But the second
 one... it is the one we have to deal. The solution is to put the file
 content (or some large chunk of it. More about it later) on memory.
 
-The simplest solution is using our `view()` method to get our contents
-and then operate on them, so lets start with that. we create our class
+The simplest solution is using our FileTarget to get our file contents
+and then operate on them elsewhere, so lets start with that. we create our class
 MemoryTarget as follows:
 
 ```cpp
-class Target {
+class MemoryTarget {
 public:
 	MemoryTarget(std::string const &filename);
 	std::string view(size_t pos, size_t count) const;
@@ -59,8 +59,7 @@ inline MemoryTarget::MemoryTarget(const std::string& filename):
 We use the old jump-to-last-to-see-the-size trick here, so we don't have to rely 
 on os-dependent solution to see the size (jump to end, get position, that is the
 current size, then jump back to the start). We use view() with the size to get
-the entire content. Copying it to content is not as bad as it seems, as it will
-just use move semantics in that case. 
+the entire content. 
 
 View
 ----
@@ -328,26 +327,35 @@ Now we can run both *targets*. But we don't have access yet to our methods `inse
 create (before the TargetTraits) these structs:
 
 ```cpp
-struct writeable_target_tag {};
-struct insertable_target_tag: public writeable_target_tag {};
+struct appendable_target_tag {};
+struct insertable_target_tag: public appendable_target_tag {};
 ```
 
 Then we implement a TargetTrait class, as the following:
 
 ```cpp
 template<typename TARGET>
-struct TargetTrait; // Causes an error if called upon unsupported
-
-template<>
-struct TargetTrait<FileTarget>{
-	using category = writeable_target_tag;
-};
-
-template<>
-struct TargetTrait<MemoryTarget>{
-	using category = insertable_target_tag;
+struct TargetTrait{
+	using category = typename TARGET::category;
 };
 ```
+
+And finally put the correct categories on our Targets:
+
+```cpp
+class FileTarget{
+public:
+	using category = appendable_target_tag;
+	/* ... */
+};
+
+class MemoryTarget{
+public:
+	using category = insertable_target_tag;
+	/* ... */
+};
+//
+``` 
 
 If you are not familiar with this idiom, it enable us to select different methods
 at compile time. In our example, we will declare the initCommands() methods at
@@ -461,7 +469,7 @@ performance comparisons between our implemented targets up to now.
 
 [main]: https://talesm.github.io/sweet/
 [lesson1]: ../lesson1/README.md
-[lesson3]: ../lesson2/README.md
+[lesson3]: ../lesson3/README.md
 [code]: src/
 [cmake]: https://cmake.org/
 [cmakelists]: ./CMakeLists.txt

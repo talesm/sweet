@@ -8,29 +8,14 @@
 #ifndef SRC_TARGETTRAITS_HPP_
 #define SRC_TARGETTRAITS_HPP_
 
-struct writeable_target_tag {
+struct appendable_target_tag {
 };
-struct insertable_target_tag: public writeable_target_tag {
+struct insertable_target_tag: public appendable_target_tag {
 };
 
 template<typename TARGET>
-struct TargetTrait;
-// Causes an error if called upon unsupported
-
-// Forward
-class FileTarget;
-
-template<>
-struct TargetTrait<FileTarget> {
-	using category = writeable_target_tag;
-};
-
-// Forward
-class MemoryTarget;
-
-template<>
-struct TargetTrait<MemoryTarget> {
-	using category = insertable_target_tag;
+struct TargetTrait{
+	using category = typename TARGET::category;
 };
 
 #endif /* SRC_TARGETTRAITS_HPP_ */

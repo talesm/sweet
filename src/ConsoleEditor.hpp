@@ -17,6 +17,28 @@
 
 #include "TargetTraits.hpp"
 
+template<class TARGET>
+inline std::string textViewTarget(TARGET &target, long pos, long size){
+	return textViewTarget(target, pos, size, typename TargetTrait<TARGET>::category{});
+}
+template<class TARGET>
+inline std::string textViewTarget(TARGET &target, long pos, long size, appendable_target_tag){
+	auto currentPosition = target.tell();
+	target.toStart();
+	target.go(pos);
+	std::string content;
+	target.view(size, std::back_inserter(content));
+	target.toStart();
+	target.go(currentPosition);
+	return content;
+}
+template<class TARGET>
+inline std::string textViewTarget(TARGET &target, long pos, long size, insertable_target_tag){
+	std::string content;
+	target.viewRange(pos, size, std::back_inserter(content));
+	return content;
+}
+
 /**
  * A basic file editor
  */
@@ -57,7 +79,7 @@ private:
 	void registerMethod(char key, void (TARGET::*method)(const std::string&));
 	template<typename PARAM>
 	void registerMethod(char key, void (TARGET::*method)(PARAM));
-	void registerMethod(char key, void (TARGET::*method)(std::string::const_iterator &&, std::string::const_iterator &&));
+	void registerMethod(char key, void (TARGET::*method)(std::string::const_iterator, std::string::const_iterator &&));
 	/// @}
 
 	/**
@@ -66,8 +88,10 @@ private:
 	 * `initCommands(typename TargetTraits<TARGET>::category{})`.
 	 * @{
 	 */
-	void initCommands(writeable_target_tag);
+	void initCommands(appendable_target_tag);
 	void initCommands(insertable_target_tag);
+	void renderTagged(std::ostream& out, appendable_target_tag);
+	void renderTagged(std::ostream& out, insertable_target_tag);
 	///@}
 };
 
@@ -91,10 +115,7 @@ inline bool ConsoleEditor<TARGET>::update(std::string const &line) {
 
 template<typename TARGET>
 inline void ConsoleEditor<TARGET>::render(std::ostream& out) {
-	auto currentPosition = target.tell();
-	target.toStart();
-	std::string content;
-	target.view(60, std::back_inserter(content));
+	std::string content = textViewTarget(target, 0, 60);
 	for (auto &ch : content) {
 		if (ch < 0x20 || ch >= 0x7f) {
 			ch = '?';
@@ -103,8 +124,6 @@ inline void ConsoleEditor<TARGET>::render(std::ostream& out) {
 	out << "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-" << std::endl;
 	out << content << std::endl;
 	out << "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-" << std::endl;
-	target.toStart();
-	target.go(currentPosition);
 }
 
 /**
@@ -156,7 +175,7 @@ inline void ConsoleEditor<TARGET>::registerMethod(char key, void (TARGET::*metho
 }
 
 template<typename TARGET>
-void ConsoleEditor<TARGET>::registerMethod(char key, void (TARGET::*method)(std::string::const_iterator &&, std::string::const_iterator &&)){
+void ConsoleEditor<TARGET>::registerMethod(char key, void (TARGET::*method)(std::string::const_iterator , std::string::const_iterator &&)){
 	commands[key] = [this, method](const std::string& cmd) {
 		(target.*method)(cmd.begin()+1, cmd.end());
 	};
@@ -167,7 +186,7 @@ void ConsoleEditor<TARGET>::registerMethod(char key, void (TARGET::*method)(std:
  */
 template<typename TARGET>
 inline void ConsoleEditor<TARGET>::initCommands(insertable_target_tag) {
-	initCommands(writeable_target_tag { });
+	initCommands(appendable_target_tag { });
 	registerMethod('i', &TARGET::insert);
 	registerMethod('d', &TARGET::erase);
 }
@@ -176,7 +195,7 @@ inline void ConsoleEditor<TARGET>::initCommands(insertable_target_tag) {
  * A basic file editor
  */
 template<typename TARGET>
-inline void ConsoleEditor<TARGET>::initCommands(writeable_target_tag) {
+inline void ConsoleEditor<TARGET>::initCommands(appendable_target_tag) {
 	registerMethod('t', &TARGET::tell);
 	registerMethod('f', &TARGET::toStart);
 	registerMethod('l', &TARGET::toEnd);

@@ -15,11 +15,14 @@
 #include <string>
 
 #include "FileTarget.hpp"
+#include "TargetTraits.hpp"
 
 /**
  * Represents a target in-memory.
  */
 class MemoryTarget {
+public:
+	using category = insertable_target_tag;
 public:
 	/**
 	 * @brief Ctor
@@ -62,7 +65,7 @@ public:
 	 * until it uses all value.size() characters.
 	 */
 	template <typename FORWARD_ITERATOR>
-	void replace(FORWARD_ITERATOR &&first, FORWARD_ITERATOR &&last);
+	void replace(FORWARD_ITERATOR first, FORWARD_ITERATOR &&last);
 
 	/**
 	 * @brief Inserts a value on current position
@@ -73,7 +76,7 @@ public:
 	 * erased.
 	 */
 	template <typename FORWARD_ITERATOR>
-	void insert(FORWARD_ITERATOR &&first, FORWARD_ITERATOR &&last);
+	void insert(FORWARD_ITERATOR first, FORWARD_ITERATOR &&last);
 
 	/**
 	 * Erase characters
@@ -157,7 +160,7 @@ inline size_t MemoryTarget::size() const {
 }
 
 template <typename FORWARD_ITERATOR>
-inline void MemoryTarget::replace(FORWARD_ITERATOR &&first, FORWARD_ITERATOR &&last) {
+inline void MemoryTarget::replace(FORWARD_ITERATOR first, FORWARD_ITERATOR &&last) {
 	using namespace std;
 	ptrdiff_t remainingSize = content.size() - position;
 	if (std::distance(first, last) <= remainingSize) {
@@ -173,7 +176,7 @@ inline void MemoryTarget::replace(FORWARD_ITERATOR &&first, FORWARD_ITERATOR &&l
 }
 
 template <typename FORWARD_ITERATOR>
-inline void MemoryTarget::insert(FORWARD_ITERATOR &&first, FORWARD_ITERATOR &&last) {
+inline void MemoryTarget::insert(FORWARD_ITERATOR first, FORWARD_ITERATOR &&last) {
 	auto incr = std::distance(first, last);
 	content.insert(content.begin() + position, first, last);
 	position += incr;

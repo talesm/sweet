@@ -13,11 +13,14 @@
 #include <cstdio>
 #include <stdexcept>
 #include <string>
+#include "TargetTraits.hpp"
 
 /**
  * A file target that can be read and written.
  */
 class FileTarget {
+public:
+	using category = appendable_target_tag;
 public:
 	/**
 	 * @brief Load the target from a file.
