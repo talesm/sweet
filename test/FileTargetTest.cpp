@@ -20,12 +20,12 @@ using namespace std;
 
 inline std::string read(FileTarget &target, long count){
 	std::string buffer;
-	target.read(count, back_inserter(buffer));
+	target.view(count, back_inserter(buffer));
 	return buffer;
 }
 
 inline void write(FileTarget &target, std::string const &buffer){
-	target.write(buffer.begin(), buffer.end());
+	target.replace(buffer.begin(), buffer.end());
 }
 
 TEST_CASE("FileTarget Happy", "[target]") {

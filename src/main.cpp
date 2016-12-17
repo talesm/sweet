@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 		case 'q':
 			return 0;
 		case 'v':
-			target.read(stol(line.substr(1)), std::back_inserter(buffer));
+			target.view(stol(line.substr(1)), std::back_inserter(buffer));
 			cout << buffer << endl;
 			break;
 		case 't':
@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
 			target.go(stol(line.substr(1)));
 			break;
 		case 'w':
-			target.write(line.begin()+1, line.end());
+			target.replace(line.begin()+1, line.end());
 			break;
 		case 's':
 			target.flush();
