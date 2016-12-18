@@ -11,11 +11,164 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <iterator>
+#include <memory>
 #include <string>
 
 #include "FileTarget.hpp"
 #include "TargetTraits.hpp"
+
+struct MemoryNode {
+	enum Type {
+		BRANCH,
+		ORIGINAL_LEAF,
+		MODIFIED_LEAF,
+	} type;
+	union {
+		struct {
+			std::unique_ptr<MemoryNode> left;
+			std::unique_ptr<MemoryNode> right;
+			size_t weight;
+		} branch;
+		struct {
+			size_t offset;
+			size_t size;
+		} original;
+		struct {
+			std::deque<char> content;
+		} modified;
+	};
+
+	MemoryNode(size_t offset, size_t size) {
+		type = ORIGINAL_LEAF;
+		original.offset = offset;
+		original.size = size;
+	}
+
+	~MemoryNode() {
+		switch (type) {
+		case BRANCH:
+			branch.left.~unique_ptr();
+			branch.right.~unique_ptr();
+			break;
+		case ORIGINAL_LEAF:
+			break;
+		case MODIFIED_LEAF:
+			modified.content.~deque();
+			break;
+		}
+	}
+
+	template<typename OUTPUT_ITERATOR>
+	void viewRange(size_t pos, size_t count, OUTPUT_ITERATOR out, FileTarget const &internalTarget) const {
+		switch (type) {
+		case BRANCH:
+			if(pos < branch.weight){
+				branch.left->viewRange(pos, std::min(branch.weight, count), out, internalTarget);
+			}
+			if(pos + count > branch.weight){
+				branch.right->viewRange(0, count - branch.weight, out, internalTarget);
+			}
+			break;
+		case ORIGINAL_LEAF:
+			internalTarget.viewRange(pos+original.offset, count, out);
+			break;
+		case MODIFIED_LEAF:
+			std::copy(modified.content.begin(), modified.content.end(), out);
+			break;
+		}
+	}
+
+	void split(size_t pos){
+		using namespace std;
+		switch (type) {
+		case ORIGINAL_LEAF:{
+			auto first = original.offset;
+			auto middle = pos;
+			auto last = first + original.size;
+			auto right = make_unique<MemoryNode>(middle, last - middle);
+			type = BRANCH;
+			new (&branch.left) unique_ptr<MemoryNode>(new MemoryNode(first, middle - first));
+			new (&branch.right) unique_ptr<MemoryNode>(new MemoryNode(middle, last - middle));
+			branch.weight = middle - first;
+			break;
+		}
+		default:
+			throw std::logic_error("Uninmplemented");
+			break;
+		}
+	}
+
+	template<typename FORWARD_ITERATOR>
+	void replace(size_t pos, FORWARD_ITERATOR first, FORWARD_ITERATOR last) {
+		using namespace std;
+		switch (type) {
+		case BRANCH:
+			if(pos < branch.weight){
+				if(distance(first, last) <= ptrdiff_t(branch.weight)){
+					branch.left->replace(pos, first, last);
+				} else {
+					auto middle = next(first, branch.weight);
+					branch.left->replace(pos, first, middle);
+					branch.right->replace(0, middle, last);
+				}
+			} else {
+				branch.right->replace(pos-branch.weight, first, last);
+			}
+			break;
+		case ORIGINAL_LEAF:
+			if (pos > 0) {
+				split(pos);
+				branch.right->replace(0, first, last);
+			} else if (distance(first, last) < ptrdiff_t(original.size)) {
+				split(distance(first, last));
+				branch.left->replace(pos, first, last);
+			} else {
+				type = MODIFIED_LEAF;
+				new(&modified.content) deque<char>(first, last);
+			}
+			break;
+		case MODIFIED_LEAF:
+			if(distance(first, last) > ptrdiff_t(modified.content.size()-pos)){
+				auto middle = next(first, modified.content.size()-pos);
+				copy(first, middle, modified.content.begin()+pos);
+				copy(middle, last, back_inserter(modified.content));
+			} else {
+				copy(first, last, modified.content.begin()+pos);
+			}
+			break;
+		}
+	}
+
+	template<typename FORWARD_ITERATOR>
+	void insert(size_t pos, FORWARD_ITERATOR first, FORWARD_ITERATOR last){
+		using namespace std;
+
+		switch (type) {
+		case BRANCH:
+			if (pos <= branch.weight) {
+				branch.left->insert(pos, first, last);
+				branch.weight += distance(first, last);
+			} else {
+				branch.right->insert(pos - branch.weight, first, last);
+			}
+			break;
+		case ORIGINAL_LEAF:
+			if (pos == original.size) {
+				replace(pos, first, last);
+			} else {
+				split(pos);
+				branch.left->insert(pos, first, last);
+				branch.weight += distance(first, last);
+			}
+			break;
+		case MODIFIED_LEAF:
+			throw std::logic_error("Unimplemented");
+			break;
+		}
+	}
+};
 
 /**
  * Represents a target in-memory.
@@ -35,21 +188,25 @@ public:
 	 * @param count the max number of characters.
 	 */
 	template<typename OUTPUT_ITERATOR>
-	void view(size_t count, OUTPUT_ITERATOR &&out) const;
+	void view(size_t count, OUTPUT_ITERATOR out) const;
 
 	/**
 	 * @brief Returns a view.
 	 * @param count the max number of characters.
 	 */
 	template<typename OUTPUT_ITERATOR>
-	void viewRange(size_t pos, size_t count, OUTPUT_ITERATOR&& out) const;
+	void viewRange(size_t pos, size_t count, OUTPUT_ITERATOR out) const {
+		parent->viewRange(pos, count, out, internalTarget);
+	}
 
 	/**
 	 * @brief Returns a view.
 	 * @param count the max number of characters.
 	 */
 	template<typename OUTPUT_ITERATOR>
-	void viewAll(OUTPUT_ITERATOR&& out) const;
+	void viewAll(OUTPUT_ITERATOR&& out) const {
+		viewRange(0, size_, out);
+	}
 
 	/**
 	 * @brief Tells the number of characters.
@@ -64,8 +221,14 @@ public:
 	 * It starts at the current position and advances it
 	 * until it uses all value.size() characters.
 	 */
-	template <typename FORWARD_ITERATOR>
-	void replace(FORWARD_ITERATOR first, FORWARD_ITERATOR &&last);
+	template<typename FORWARD_ITERATOR>
+	void replace(FORWARD_ITERATOR first, FORWARD_ITERATOR last) {
+		parent->replace(position, first, last);
+		position += std::distance(first, last);
+		if (position > size_) {
+			size_ = position;
+		}
+	}
 
 	/**
 	 * @brief Inserts a value on current position
@@ -75,8 +238,13 @@ public:
 	 * to make space to the new content, so nothing is
 	 * erased.
 	 */
-	template <typename FORWARD_ITERATOR>
-	void insert(FORWARD_ITERATOR first, FORWARD_ITERATOR &&last);
+	template<typename FORWARD_ITERATOR>
+	void insert(FORWARD_ITERATOR first, FORWARD_ITERATOR last) {
+		parent->insert(position, first, last);
+		auto incr = std::distance(first, last);
+		position += incr;
+		size_ += incr;
+	}
 
 	/**
 	 * Erase characters
@@ -109,22 +277,21 @@ public:
 	 */
 	void go(ptrdiff_t offset);
 private:
-	std::string content;
 	FileTarget internalTarget;
-	size_t position;
+	size_t position, size_;
+	std::unique_ptr<MemoryNode> parent;
 };
 
 inline MemoryTarget::MemoryTarget(std::string const& filename) :
 		internalTarget(filename), position(0) {
 	internalTarget.toEnd();
-	long count = internalTarget.tell();
+	size_ = internalTarget.tell();
 	internalTarget.toStart();
-	content.reserve(count);
-	internalTarget.view(count, std::back_inserter(content));
+	parent = std::make_unique<MemoryNode>(position, size_);
 }
 
 template<typename OUTPUT_ITERATOR>
-inline void MemoryTarget::view(size_t count, OUTPUT_ITERATOR &&out) const {
+inline void MemoryTarget::view(size_t count, OUTPUT_ITERATOR out) const {
 	static_assert(
 			std::is_base_of<std::output_iterator_tag, typename std::iterator_traits<OUTPUT_ITERATOR>::iterator_category>::value,
 			"parameter out needs to be an output iterator."
@@ -132,67 +299,21 @@ inline void MemoryTarget::view(size_t count, OUTPUT_ITERATOR &&out) const {
 	viewRange(position, count, out);
 }
 
-/**
- * @brief Returns a view.
- * @param count the max number of characters.
- */
-template<typename OUTPUT_ITERATOR>
-inline void MemoryTarget::viewRange(size_t pos, size_t count, OUTPUT_ITERATOR&& out) const {
-	auto first = content.begin() + std::min(pos, content.size());
-	if (first == content.end()) {
-		return;
-	}
-	auto last = first + std::min(count, content.size() - pos);
-	std::copy(first, last, out);
-}
-
-/**
- * @brief Returns a view.
- * @param count the max number of characters.
- */
-template<typename OUTPUT_ITERATOR>
-inline void MemoryTarget::viewAll(OUTPUT_ITERATOR&& out) const {
-	std::copy(content.begin(), content.end(), out);
-}
-
 inline size_t MemoryTarget::size() const {
-	return content.size();
-}
-
-template <typename FORWARD_ITERATOR>
-inline void MemoryTarget::replace(FORWARD_ITERATOR first, FORWARD_ITERATOR &&last) {
-	using namespace std;
-	ptrdiff_t remainingSize = content.size() - position;
-	if (std::distance(first, last) <= remainingSize) {
-		auto result = copy(first, last, content.begin() + position);
-		position = result - content.begin();
-	} else {
-		string::const_iterator transition_point;
-		transition_point = first + remainingSize;
-		copy(first, transition_point, content.begin() + position);
-		content.append(transition_point, last);
-		position = content.size();
-	}
-}
-
-template <typename FORWARD_ITERATOR>
-inline void MemoryTarget::insert(FORWARD_ITERATOR first, FORWARD_ITERATOR &&last) {
-	auto incr = std::distance(first, last);
-	content.insert(content.begin() + position, first, last);
-	position += incr;
+	return size_;
 }
 
 inline void MemoryTarget::erase(size_t count) {
-	auto first = content.begin() + position;
-	auto last = first + count;
-	content.erase(first, last);
+//	auto first = content.begin() + position;
+//	auto last = first + count;
+//	content.erase(first, last);
 }
 
 inline void MemoryTarget::flush() {
-	internalTarget.toStart();
-	internalTarget.replace(content.begin(), content.end());
-	internalTarget.shrink();
-	internalTarget.flush();
+//	internalTarget.toStart();
+//	internalTarget.replace(content.begin(), content.end());
+//	internalTarget.shrink();
+//	internalTarget.flush();
 }
 
 inline size_t MemoryTarget::tell() const {
@@ -200,7 +321,7 @@ inline size_t MemoryTarget::tell() const {
 }
 
 inline void MemoryTarget::toEnd() {
-	position = content.size();
+	position = size_;
 }
 
 inline void MemoryTarget::toStart() {
@@ -209,7 +330,7 @@ inline void MemoryTarget::toStart() {
 
 inline void MemoryTarget::go(ptrdiff_t offset) {
 	position += offset;
-	position = std::min(position, content.size());
+//	position = std::min(position, content.size());
 }
 
 #endif /* SWEET_MEMORYTARGET_HPP_ */

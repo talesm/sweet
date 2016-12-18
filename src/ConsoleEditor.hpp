@@ -79,7 +79,7 @@ private:
 	void registerMethod(char key, void (TARGET::*method)(const std::string&));
 	template<typename PARAM>
 	void registerMethod(char key, void (TARGET::*method)(PARAM));
-	void registerMethod(char key, void (TARGET::*method)(std::string::const_iterator, std::string::const_iterator &&));
+	void registerMethod(char key, void (TARGET::*method)(std::string::const_iterator, std::string::const_iterator));
 	/// @}
 
 	/**
@@ -175,7 +175,7 @@ inline void ConsoleEditor<TARGET>::registerMethod(char key, void (TARGET::*metho
 }
 
 template<typename TARGET>
-void ConsoleEditor<TARGET>::registerMethod(char key, void (TARGET::*method)(std::string::const_iterator , std::string::const_iterator &&)){
+void ConsoleEditor<TARGET>::registerMethod(char key, void (TARGET::*method)(std::string::const_iterator , std::string::const_iterator)){
 	commands[key] = [this, method](const std::string& cmd) {
 		(target.*method)(cmd.begin()+1, cmd.end());
 	};

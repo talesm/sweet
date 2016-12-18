@@ -47,6 +47,10 @@ public:
 	template<typename OUTPUT_ITERATOR>
 	void view(long count, OUTPUT_ITERATOR &&out) const;
 
+
+	template<typename OUTPUT_ITERATOR>
+	void viewRange(long pos, long count, OUTPUT_ITERATOR &&out) const;
+
 	/**
 	 * @brief  Return our current position
 	 */
@@ -76,7 +80,7 @@ public:
 	 * @param last
 	 */
 	template<typename INPUT_ITERATOR>
-	void replace(INPUT_ITERATOR first, INPUT_ITERATOR &&last);
+	void replace(INPUT_ITERATOR first, INPUT_ITERATOR last);
 	void flush();
 
 	void shrink();
@@ -101,10 +105,15 @@ inline FileTarget::~FileTarget() {
 
 template<typename OUTPUT_ITERATOR>
 inline void FileTarget::view(long count, OUTPUT_ITERATOR &&out) const {
-	static_assert(
-			std::is_base_of<std::output_iterator_tag, typename std::iterator_traits<OUTPUT_ITERATOR>::iterator_category>::value,
-			"out parameter must be an output iterator"
-	);
+	int ch;
+	while ((ch = getc(file)) != EOF && count-- > 0) {
+		*out++ = ch;
+	}
+}
+
+template<typename OUTPUT_ITERATOR>
+inline void FileTarget::viewRange(long pos, long count, OUTPUT_ITERATOR &&out) const {
+	fseek(file, pos, SEEK_SET);
 	int ch;
 	while ((ch = getc(file)) != EOF && count-- > 0) {
 		*out++ = ch;
@@ -128,7 +137,7 @@ inline void FileTarget::go(long value) {
 }
 
 template<typename INPUT_ITERATOR>
-inline void FileTarget::replace(INPUT_ITERATOR first, INPUT_ITERATOR &&last) {
+inline void FileTarget::replace(INPUT_ITERATOR first, INPUT_ITERATOR last) {
 	static_assert(
 			std::is_base_of<std::input_iterator_tag, typename std::iterator_traits<INPUT_ITERATOR>::iterator_category>::value,
 			"first and last parameters must be input iterators"

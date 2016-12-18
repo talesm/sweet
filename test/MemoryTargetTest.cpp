@@ -56,6 +56,7 @@ TEST_CASE("Memory Target Test", "[target]"){
 		REQUIRE(readAll(target) == "Weird Times");
 		replace(target, "!!!");
 		REQUIRE(readAll(target) == "Weird Times!!!");
+		REQUIRE(getFileContent(path1) == "Hello World");
 	}
 
 	SECTION("insert"){
