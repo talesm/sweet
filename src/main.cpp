@@ -7,6 +7,7 @@
 #include "MemoryTarget.hpp"
 
 using namespace std;
+using namespace sweet;
 
 template<typename TARGET>
 void run(string const &fileName);

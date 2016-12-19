@@ -8,6 +8,8 @@
 #ifndef SRC_MEMORYNODE_HPP_
 #define SRC_MEMORYNODE_HPP_
 
+namespace sweet {
+
 /**
  * A rope based memory node.
  */
@@ -364,6 +366,8 @@ inline ptrdiff_t MemoryNode::offset() const {
 		return modified.content.size() - modified.originalSize;
 	}
 	throw std::logic_error("It should never happen");
+}
+
 }
 
 #endif /* SRC_MEMORYNODE_HPP_ */

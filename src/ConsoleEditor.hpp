@@ -17,6 +17,8 @@
 
 #include "TargetTraits.hpp"
 
+namespace sweet {
+
 template<class TARGET>
 inline std::string textViewTarget(TARGET &target, long pos, long size){
 	return textViewTarget(target, pos, size, typename TargetTrait<TARGET>::category{});
@@ -203,5 +205,7 @@ inline void ConsoleEditor<TARGET>::initCommands(appendable_target_tag) {
 	registerMethod('w', &TARGET::replace);
 	registerMethod('s', &TARGET::flush);
 }
+
+}  // namespace sweet
 
 #endif /* SRC_CONSOLEEDITOR_HPP_ */

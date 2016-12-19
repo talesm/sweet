@@ -20,6 +20,8 @@
 #include "MemoryNode.hpp"
 #include "TargetTraits.hpp"
 
+namespace sweet {
+
 /**
  * Represents a target in-memory.
  */
@@ -217,6 +219,8 @@ inline void MemoryTarget::toStart() {
 
 inline void MemoryTarget::go(ptrdiff_t offset) {
 	position += offset;
+}
+
 }
 
 #endif /* SWEET_MEMORYTARGET_HPP_ */

@@ -15,6 +15,8 @@
 #include <string>
 #include "TargetTraits.hpp"
 
+namespace sweet {
+
 /**
  * A file target that can be read and written.
  */
@@ -163,6 +165,8 @@ inline void FileTarget::shrink() {
 		throw new std::runtime_error("Can not shrink");
 	}
 	replace(content.begin(), content.end());
+}
+
 }
 
 #endif /* SWEET_FILETARGET_HPP_ */

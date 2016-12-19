@@ -11,6 +11,7 @@
 #include <fstream>
 
 using namespace std;
+using namespace sweet;
 
 #ifndef TEST_TEMP_PREFIX
 #define TEST_TEMP_PREFIX "./test"
