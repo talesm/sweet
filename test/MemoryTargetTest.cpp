@@ -102,6 +102,11 @@ TEST_CASE("Memory Target Test", "[target]"){
 		target.go(6);
 		target.erase(3);
 		REQUIRE(readAll(target) == "Held w me!");
+		target.erase(4);
+		REQUIRE(readAll(target) == "Held w");
+		target.go(-2);
+		target.erase(2);
+		REQUIRE(readAll(target) == "Held");
 	}
 
 	SECTION("flush"){
