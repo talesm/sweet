@@ -14,6 +14,8 @@
 #include <stdexcept>
 #include <string>
 
+namespace sweet {
+
 /**
  * A file target that can be read and written.
  */
@@ -138,6 +140,8 @@ inline void FileTarget::replace(INPUT_ITERATOR first, INPUT_ITERATOR &&last) {
 
 inline void FileTarget::flush() {
 	fflush(file);
+}
+
 }
 
 #endif /* SRC_FILETARGET_HPP_ */
