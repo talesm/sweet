@@ -64,59 +64,7 @@ public:
 	 */
 	void erase(size_t pos, size_t count);
 
-	void flush(FileTarget &target, ptrdiff_t offset = 0) {
-		using namespace std;
-		switch (type) {
-		case BRANCH: {
-			if(offset == 0){
-				ptrdiff_t leftOffset = branch.left->offset();
-				if(leftOffset > 0){
-					target.go(branch.weight + leftOffset);
-					branch.right->flush(target, offset + leftOffset);
-					target.go(-branch.weight - branch.right->original.size);
-					branch.left->flush(target, offset);
-				} else {
-					branch.left->flush(target, offset);
-					branch.right->flush(target, offset + leftOffset);
-				}
-				size_t offset = branch.left->original.offset;
-				size_t size = branch.left->original.size + branch.right->original.size;
-				branch.left.~unique_ptr();
-				branch.right.~unique_ptr();
-				type = ORIGINAL_LEAF;
-				original.offset = offset;
-				original.size = size;
-			} else {
-				throw logic_error("Unimplemented");
-			}
-			break;
-		}
-		case ORIGINAL_LEAF:
-			if(offset > 0){
-				string buffer;
-				buffer.reserve(original.size); //TODO make it in chunks...
-				target.go(-offset);
-				target.viewRange(original.offset, original.size, back_inserter(buffer));
-				target.go(offset - original.size);
-				target.replace(buffer.begin(), buffer.end());
-			} else if (offset < 0) {
-				throw logic_error("Unimplemented");
-			} else {
-				target.go(original.size);
-			}
-			break;
-		case MODIFIED_LEAF: {
-			size_t foffset = target.tell();
-			size_t size = modified.content.size();
-			target.replace(modified.content.begin(), modified.content.end());
-			modified.content.~deque();
-			type = ORIGINAL_LEAF;
-			original.offset = foffset;
-			original.size = size;
-			break;
-		}
-		}
-	}
+	void flush(FileTarget& target, ptrdiff_t offset = 0);
 private:
 	/**
 	 * Split at pos.
@@ -124,17 +72,11 @@ private:
 	 */
 	void split(size_t pos);
 
-	ptrdiff_t offset() const{
-		switch (type) {
-		case BRANCH:
-			return branch.left->offset() + branch.right->offset();
-		case ORIGINAL_LEAF:
-			return 0;
-		case MODIFIED_LEAF:
-			return modified.content.size() - modified.originalSize;
-		}
-		throw std::logic_error("It should never happen");
-	}
+	/**
+	 * Gets the offset.
+	 * @return
+	 */
+	ptrdiff_t offset() const;
 
 private:
 	enum Type {
@@ -324,6 +266,57 @@ inline void MemoryNode::erase(size_t pos, size_t count) {
 	}
 }
 
+inline void MemoryNode::flush(FileTarget& target, ptrdiff_t offset) {
+	using namespace std;
+	switch (type) {
+	case BRANCH: {
+		ptrdiff_t leftOffset = branch.left->offset();
+		if (leftOffset > 0) {
+			target.go(branch.weight);
+			branch.right->flush(target, offset + leftOffset);
+			target.go(-branch.weight - branch.right->original.size - offset);
+			branch.left->flush(target, offset);
+		} else {
+			branch.left->flush(target, offset);
+			branch.right->flush(target, offset + leftOffset);
+		}
+		size_t foffset = branch.left->original.offset;
+		size_t size = branch.left->original.size + branch.right->original.size;
+		branch.left.~unique_ptr();
+		branch.right.~unique_ptr();
+		type = ORIGINAL_LEAF;
+		original.offset = foffset;
+		original.size = size;
+		break;
+	}
+	case ORIGINAL_LEAF: {
+		ptrdiff_t cPos = target.tell();
+		ptrdiff_t realOffset = target.tell() - original.offset;
+		if (realOffset != 0) {
+			string buffer;
+			buffer.reserve(original.size); //TODO make it in chunks...
+			target.viewRange(original.offset, original.size, back_inserter(buffer));
+			target.go(cPos - target.tell());
+			target.replace(buffer.begin(), buffer.end());
+			original.offset += realOffset - offset;
+		} else {
+			target.go(original.size);
+		}
+		break;
+	}
+	case MODIFIED_LEAF: {
+		size_t foffset = target.tell();
+		size_t size = modified.content.size();
+		target.replace(modified.content.begin(), modified.content.end());
+		modified.content.~deque();
+		type = ORIGINAL_LEAF;
+		original.offset = foffset;
+		original.size = size;
+		break;
+	}
+	}
+}
+
 inline void MemoryNode::split(size_t pos) {
 	using namespace std;
 	switch (type) {
@@ -359,6 +352,18 @@ inline void MemoryNode::split(size_t pos) {
 		break;
 	}
 	}
+}
+
+inline ptrdiff_t MemoryNode::offset() const {
+	switch (type) {
+	case BRANCH:
+		return branch.left->offset() + branch.right->offset();
+	case ORIGINAL_LEAF:
+		return 0;
+	case MODIFIED_LEAF:
+		return modified.content.size() - modified.originalSize;
+	}
+	throw std::logic_error("It should never happen");
 }
 
 #endif /* SRC_MEMORYNODE_HPP_ */

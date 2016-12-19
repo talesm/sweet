@@ -135,6 +135,22 @@ TEST_CASE("Memory Target Test", "[target]"){
 		REQUIRE(getFileContent(path1) == "Oh, Hello... World!!!");
 	}
 
+	SECTION("flush erasing"){
+		target.erase(3);
+		target.flush();
+		REQUIRE(readAll(target) == "lo World");
+		REQUIRE(getFileContent(path1) == "lo World");
+		target.go(3);
+		target.erase(3);
+		target.flush();
+		REQUIRE(readAll(target) == "lo ld");
+		REQUIRE(getFileContent(path1) == "lo ld");
+		target.erase(2);
+		target.flush();
+		REQUIRE(readAll(target) == "lo ");
+		REQUIRE(getFileContent(path1) == "lo ");
+	}
+
 	SECTION("flush everything"){
 		REQUIRE(readAll(target) == "Hello World");
 		target.erase(5);
@@ -144,6 +160,7 @@ TEST_CASE("Memory Target Test", "[target]"){
 		REQUIRE(readAll(target) == "Hi Weird");
 		REQUIRE(getFileContent(path1) == "Hello World");
 		target.flush();
+//		REQUIRE(readAll(target) == "Hi Weird");
 		REQUIRE(getFileContent(path1) == "Hi Weird");
 	}
 }
