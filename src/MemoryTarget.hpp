@@ -113,14 +113,14 @@ public:
 	void go(ptrdiff_t offset);
 private:
 	FileTarget internalTarget;
-	size_t position, size_;
+	size_t position, size_, originalSize;
 	std::unique_ptr<MemoryNode> parent;
 };
 
 inline MemoryTarget::MemoryTarget(std::string const& filename) :
 		internalTarget(filename), position(0) {
 	internalTarget.toEnd();
-	size_ = internalTarget.tell();
+	originalSize = size_ = internalTarget.tell();
 	internalTarget.toStart();
 	parent = std::make_unique<MemoryNode>(position, size_);
 }
@@ -194,10 +194,12 @@ inline void MemoryTarget::erase(size_t count) {
 }
 
 inline void MemoryTarget::flush() {
-//	internalTarget.toStart();
-//	internalTarget.replace(content.begin(), content.end());
-//	internalTarget.shrink();
-//	internalTarget.flush();
+	internalTarget.toStart();
+	parent->flush(internalTarget);
+	if(size() < originalSize){
+		internalTarget.shrink();
+	}
+	internalTarget.flush();
 }
 
 inline size_t MemoryTarget::tell() const {

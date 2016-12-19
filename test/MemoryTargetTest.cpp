@@ -109,7 +109,15 @@ TEST_CASE("Memory Target Test", "[target]"){
 		REQUIRE(readAll(target) == "Held");
 	}
 
-	SECTION("flush"){
+	SECTION("flush replaced"){
+		replace(target, "Weird");
+		REQUIRE(getFileContent(path1) == "Hello World");
+		target.flush();
+		REQUIRE(getFileContent(path1) == "Weird World");
+		REQUIRE(readAll(target) == "Weird World");
+	}
+
+	SECTION("flush everything"){
 		REQUIRE(readAll(target) == "Hello World");
 		target.erase(5);
 		insert(target, "Hi");
