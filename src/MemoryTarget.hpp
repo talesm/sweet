@@ -46,6 +46,11 @@ struct MemoryNode {
 		original.size = size;
 	}
 
+	MemoryNode(std::deque<char> &&content) {
+		type = MODIFIED_LEAF;
+		new (&modified.content) std::deque<char>(move(content));
+	}
+
 	~MemoryNode() {
 		switch (type) {
 		case BRANCH:
@@ -83,6 +88,8 @@ struct MemoryNode {
 	void split(size_t pos){
 		using namespace std;
 		switch (type) {
+		case BRANCH:
+			throw std::logic_error("Unimplemented");
 		case ORIGINAL_LEAF:{
 			auto first = original.offset;
 			auto middle = pos;
@@ -94,9 +101,18 @@ struct MemoryNode {
 			branch.weight = middle - first;
 			break;
 		}
-		default:
-			throw std::logic_error("Uninmplemented");
+		case MODIFIED_LEAF:{
+			auto leftContent = move(modified.content);
+			deque<char> rightContent(leftContent.begin()+pos, leftContent.end());
+			leftContent.erase(leftContent.begin()+pos, leftContent.end());
+			modified.content.~deque();
+
+			type = BRANCH;
+			new (&branch.left) unique_ptr<MemoryNode>(new MemoryNode(move(leftContent)));
+			new (&branch.right) unique_ptr<MemoryNode>(new MemoryNode(move(rightContent)));
+			branch.weight = branch.left->modified.content.size();
 			break;
+		}
 		}
 	}
 
@@ -164,8 +180,24 @@ struct MemoryNode {
 			}
 			break;
 		case MODIFIED_LEAF:
-			throw std::logic_error("Unimplemented");
+			if( pos == modified.content.size()){
+				replace(pos, first, last);
+			} else {
+				split(pos);
+				branch.left->insert(pos, first, last);
+			}
 			break;
+		}
+	}
+
+	void erase(size_t position, size_t count) {
+		switch (type) {
+		case BRANCH:
+			throw std::logic_error("Unimplemented");
+		case ORIGINAL_LEAF:
+			throw std::logic_error("Unimplemented");
+		case MODIFIED_LEAF:
+			throw std::logic_error("Unimplemented");
 		}
 	}
 };
@@ -304,9 +336,7 @@ inline size_t MemoryTarget::size() const {
 }
 
 inline void MemoryTarget::erase(size_t count) {
-//	auto first = content.begin() + position;
-//	auto last = first + count;
-//	content.erase(first, last);
+	parent->erase(position, count);
 }
 
 inline void MemoryTarget::flush() {

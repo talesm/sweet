@@ -68,6 +68,11 @@ TEST_CASE("Memory Target Test", "[target]"){
 		target.go(-8);
 		insert(target, "...");
 		REQUIRE(readAll(target) == "Oh, Hello... World??");
+		insert(target, "darkness?");
+		REQUIRE(readAll(target) == "Oh, Hello...darkness? World??");
+		target.go(-1);
+		insert(target, " old friend");
+		REQUIRE(readAll(target) == "Oh, Hello...darkness old friend? World??");
 	}
 
 	SECTION("erase"){
