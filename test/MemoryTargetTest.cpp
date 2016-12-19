@@ -79,8 +79,29 @@ TEST_CASE("Memory Target Test", "[target]"){
 		target.erase(5);
 		REQUIRE(readAll(target) == " World");
 		target.go(1);
-		target.erase(5);
+		target.erase(3);
+		REQUIRE(readAll(target) == " ld");
+		target.erase(2);
 		REQUIRE(readAll(target) == " ");
+	}
+
+	SECTION("erase2"){
+		target.go(+5);
+		target.erase(1);
+		REQUIRE(readAll(target) == "HelloWorld");
+		target.go(-1);
+		target.erase(1);
+		REQUIRE(readAll(target) == "HellWorld");
+		target.go(-1);
+		target.erase(5);
+		REQUIRE(readAll(target) == "Held");
+		target.toEnd();
+		insert(target, " with me!");
+		REQUIRE(readAll(target) == "Held with me!");
+		target.toStart();
+		target.go(6);
+		target.erase(3);
+		REQUIRE(readAll(target) == "Held w me!");
 	}
 
 	SECTION("flush"){

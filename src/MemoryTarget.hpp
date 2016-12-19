@@ -92,9 +92,8 @@ struct MemoryNode {
 			throw std::logic_error("Unimplemented");
 		case ORIGINAL_LEAF:{
 			auto first = original.offset;
-			auto middle = pos;
+			auto middle = first + pos;
 			auto last = first + original.size;
-			auto right = make_unique<MemoryNode>(middle, last - middle);
 			type = BRANCH;
 			new (&branch.left) unique_ptr<MemoryNode>(new MemoryNode(first, middle - first));
 			new (&branch.right) unique_ptr<MemoryNode>(new MemoryNode(middle, last - middle));
@@ -190,14 +189,44 @@ struct MemoryNode {
 		}
 	}
 
-	void erase(size_t position, size_t count) {
+	void erase(size_t pos, size_t count) {
 		switch (type) {
 		case BRANCH:
-			throw std::logic_error("Unimplemented");
+			if(pos < branch.weight){
+				if (pos + count <= branch.weight) {
+					branch.left->erase(pos, count);
+					branch.weight -= count;
+				} else {
+					auto leftCount = branch.weight - pos;
+					branch.left->erase(pos, leftCount);
+					branch.right->erase(0, count - leftCount);
+					branch.weight -= leftCount;
+				}
+			} else {
+				branch.right->erase(pos - branch.weight, count);
+			}
+			break;
 		case ORIGINAL_LEAF:
-			throw std::logic_error("Unimplemented");
+			if (pos == 0) {
+				auto diff = std::min(count, original.size);
+				original.offset += diff;
+				original.size -= diff;
+			} else if (pos + count >= original.size) {
+				original.size -= std::min(count, original.size);
+			} else {
+				split(pos);
+				branch.right->erase(0, count);
+			}
+			break;
 		case MODIFIED_LEAF:
-			throw std::logic_error("Unimplemented");
+			if (pos == 0) {
+				modified.content.erase(modified.content.begin(), modified.content.begin() + count);
+			} else if (pos + count >= modified.content.size()) {
+				modified.content.erase(modified.content.begin() + pos, modified.content.end());
+			} else {
+				split(pos);
+				branch.right->erase(0, count);
+			}
 		}
 	}
 };
@@ -337,6 +366,7 @@ inline size_t MemoryTarget::size() const {
 
 inline void MemoryTarget::erase(size_t count) {
 	parent->erase(position, count);
+	size_ -= count;
 }
 
 inline void MemoryTarget::flush() {
