@@ -117,6 +117,24 @@ TEST_CASE("Memory Target Test", "[target]"){
 		REQUIRE(readAll(target) == "Weird World");
 	}
 
+	SECTION("flush insertion"){
+		insert(target, "Oh, ");
+		REQUIRE(getFileContent(path1) == "Hello World");
+		target.flush();
+		REQUIRE(readAll(target) == "Oh, Hello World");
+		REQUIRE(getFileContent(path1) == "Oh, Hello World");
+		target.toEnd();
+		insert(target, "!!!");
+		target.flush();
+		REQUIRE(readAll(target) == "Oh, Hello World!!!");
+		REQUIRE(getFileContent(path1) == "Oh, Hello World!!!");
+		target.go(-9);
+		insert(target, "...");
+		target.flush();
+		REQUIRE(readAll(target) == "Oh, Hello... World!!!");
+		REQUIRE(getFileContent(path1) == "Oh, Hello... World!!!");
+	}
+
 	SECTION("flush everything"){
 		REQUIRE(readAll(target) == "Hello World");
 		target.erase(5);

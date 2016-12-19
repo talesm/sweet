@@ -24,7 +24,7 @@ public:
 	 * Constructs a modified content node.
 	 * @param content
 	 */
-	MemoryNode(std::deque<char>&& content);
+	MemoryNode(std::deque<char>&& content, size_t originalSize);
 
 	//dtor
 	~MemoryNode();
@@ -64,30 +64,54 @@ public:
 	 */
 	void erase(size_t pos, size_t count);
 
-	void flush(FileTarget &target) {
+	void flush(FileTarget &target, ptrdiff_t offset = 0) {
 		using namespace std;
 		switch (type) {
 		case BRANCH: {
-			branch.left->flush(target);
-			branch.right->flush(target);
-			size_t offset = branch.left->original.offset;
-			size_t size = branch.left->original.size + branch.right->original.offset;
-			branch.left.~unique_ptr();
-			branch.right.~unique_ptr();
-			type = ORIGINAL_LEAF;
-			original.offset = offset;
-			original.size = size;
+			if(offset == 0){
+				ptrdiff_t leftOffset = branch.left->offset();
+				if(leftOffset > 0){
+					target.go(branch.weight + leftOffset);
+					branch.right->flush(target, offset + leftOffset);
+					target.go(-branch.weight - branch.right->original.size);
+					branch.left->flush(target, offset);
+				} else {
+					branch.left->flush(target, offset);
+					branch.right->flush(target, offset + leftOffset);
+				}
+				size_t offset = branch.left->original.offset;
+				size_t size = branch.left->original.size + branch.right->original.size;
+				branch.left.~unique_ptr();
+				branch.right.~unique_ptr();
+				type = ORIGINAL_LEAF;
+				original.offset = offset;
+				original.size = size;
+			} else {
+				throw logic_error("Unimplemented");
+			}
 			break;
 		}
 		case ORIGINAL_LEAF:
+			if(offset > 0){
+				string buffer;
+				buffer.reserve(original.size); //TODO make it in chunks...
+				target.go(-offset);
+				target.viewRange(original.offset, original.size, back_inserter(buffer));
+				target.go(offset - original.size);
+				target.replace(buffer.begin(), buffer.end());
+			} else if (offset < 0) {
+				throw logic_error("Unimplemented");
+			} else {
+				target.go(original.size);
+			}
 			break;
 		case MODIFIED_LEAF: {
-			size_t offset = target.tell();
+			size_t foffset = target.tell();
 			size_t size = modified.content.size();
 			target.replace(modified.content.begin(), modified.content.end());
 			modified.content.~deque();
 			type = ORIGINAL_LEAF;
-			original.offset = offset;
+			original.offset = foffset;
 			original.size = size;
 			break;
 		}
@@ -99,6 +123,18 @@ private:
 	 * @param pos
 	 */
 	void split(size_t pos);
+
+	ptrdiff_t offset() const{
+		switch (type) {
+		case BRANCH:
+			return branch.left->offset() + branch.right->offset();
+		case ORIGINAL_LEAF:
+			return 0;
+		case MODIFIED_LEAF:
+			return modified.content.size() - modified.originalSize;
+		}
+		throw std::logic_error("It should never happen");
+	}
 
 private:
 	enum Type {
@@ -118,19 +154,21 @@ private:
 		} original;
 		struct {
 			std::deque<char> content;
+			size_t originalSize;
 		} modified;
 	};
 };
-
-inline MemoryNode::MemoryNode(std::deque<char>&& content) {
-	type = MODIFIED_LEAF;
-	new (&modified.content) std::deque<char>(move(content));
-}
 
 inline MemoryNode::MemoryNode(size_t offset, size_t size) {
 	type = ORIGINAL_LEAF;
 	original.offset = offset;
 	original.size = size;
+}
+
+inline MemoryNode::MemoryNode(std::deque<char>&& content, size_t originalSize) {
+	type = MODIFIED_LEAF;
+	new (&modified.content) std::deque<char>(move(content));
+	modified.originalSize = originalSize;
 }
 
 inline MemoryNode::~MemoryNode() {
@@ -192,8 +230,10 @@ inline void MemoryNode::replace(size_t pos, FORWARD_ITERATOR first, FORWARD_ITER
 			split(distance(first, last));
 			branch.left->replace(pos, first, last);
 		} else {
+			size_t originalSize = original.size;
 			type = MODIFIED_LEAF;
 			new (&modified.content) deque<char>(first, last);
+			modified.originalSize = originalSize;
 		}
 
 		break;
@@ -303,10 +343,18 @@ inline void MemoryNode::split(size_t pos) {
 		auto leftContent = move(modified.content);
 		deque<char> rightContent(leftContent.begin() + pos, leftContent.end());
 		leftContent.erase(leftContent.begin() + pos, leftContent.end());
+		size_t leftOriginalSize, rightOriginalSize;
+		if (pos > modified.originalSize) {
+			leftOriginalSize = modified.originalSize;
+			rightOriginalSize = 0;
+		} else {
+			leftOriginalSize = pos;
+			rightOriginalSize = modified.originalSize - pos;
+		}
 		modified.content.~deque();
 		type = BRANCH;
-		new (&branch.left) unique_ptr<MemoryNode>(new MemoryNode(move(leftContent)));
-		new (&branch.right) unique_ptr<MemoryNode>(new MemoryNode(move(rightContent)));
+		new (&branch.left) unique_ptr<MemoryNode>(new MemoryNode(move(leftContent), leftOriginalSize));
+		new (&branch.right) unique_ptr<MemoryNode>(new MemoryNode(move(rightContent), rightOriginalSize));
 		branch.weight = branch.left->modified.content.size();
 		break;
 	}

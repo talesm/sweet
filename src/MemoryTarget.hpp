@@ -195,7 +195,7 @@ inline void MemoryTarget::erase(size_t count) {
 
 inline void MemoryTarget::flush() {
 	internalTarget.toStart();
-	parent->flush(internalTarget);
+	parent->flush(internalTarget, 0);
 	if(size() < originalSize){
 		internalTarget.shrink();
 	}
